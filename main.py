@@ -269,8 +269,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "https://chicoineyfront-production.up.railway.app"
+        "https://crimsonchems.com",                # Your custom domain
+        "https://web-production-fc04.up.railway.app"  # Your Railway backend
     ],
     allow_credentials=True,
     allow_methods=["*"],
