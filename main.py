@@ -249,8 +249,6 @@ async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("PRAGMA foreign_keys = ON"))
-        await conn.execute(text("PRAGMA journal_mode = WAL"))
     logger.info("Database initialized")
     yield
     # Shutdown
