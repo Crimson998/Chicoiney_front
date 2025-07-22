@@ -51,6 +51,7 @@ class UserOut(BaseModel):
     id: int
     username: str
     credits: float
+    is_admin: bool
     
     @field_validator('credits', mode='before')
     @classmethod
