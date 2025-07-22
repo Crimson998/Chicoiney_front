@@ -10,6 +10,7 @@ const Register = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -45,7 +46,7 @@ const Register = () => {
             </div>
             <div className="form-group password-group">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
@@ -53,6 +54,15 @@ const Register = () => {
                 minLength={6}
                 disabled={isLoading}
               />
+              <button
+                type="button"
+                className="show-password-btn"
+                onClick={() => setShowPassword((prev) => !prev)}
+                tabIndex={-1}
+                style={{ marginLeft: 8, padding: '0.25rem 0.5rem', fontSize: '0.9em', cursor: 'pointer' }}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
             </div>
             {error && <div className="error-message">{error}</div>}
             {success && <div className="notification success">Registration successful! Redirecting to login...</div>}
