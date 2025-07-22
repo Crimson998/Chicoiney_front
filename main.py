@@ -309,7 +309,8 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
     db_user = User(
         username=username,
         hashed_password=hashed_password,
-        credits=Decimal(str(STARTING_CREDITS))
+        credits=Decimal(str(STARTING_CREDITS)),
+        is_admin=False
     )
     
     db.add(db_user)
