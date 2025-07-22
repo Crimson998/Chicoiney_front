@@ -162,6 +162,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     
     return user
 
+# Admin check dependency
+async def require_admin(current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, 'is_admin', False):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
 # Game logic functions
 async def get_next_round_id(db: AsyncSession) -> int:
     """Get the next round ID for provably fair system"""
@@ -701,7 +707,21 @@ async def get_active_game(
         created_at=active_round.created_at
     ) 
 
-@app.get("/admin/profit", response_model=dict)
+@app.get("/admin/users", dependencies=[Depends(require_admin)])
+async def list_users(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User))
+    users = result.scalars().all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "credits": float(u.credits),
+            "created_at": u.created_at,
+            "is_admin": getattr(u, 'is_admin', False)
+        } for u in users
+    ]
+
+@app.get("/admin/profit", response_model=dict, dependencies=[Depends(require_admin)])
 async def get_house_profit(db: AsyncSession = Depends(get_db)):
     """Get house profit statistics (admin endpoint)"""
     try:
@@ -733,7 +753,7 @@ async def get_house_profit(db: AsyncSession = Depends(get_db)):
         logger.error(f"Error calculating house profit: {e}")
         raise HTTPException(status_code=500, detail="Failed to calculate profit") 
 
-@app.post("/admin/adjust-house-edge")
+@app.post("/admin/adjust-house-edge", dependencies=[Depends(require_admin)])
 async def adjust_house_edge(new_edge: float, db: AsyncSession = Depends(get_db)):
     """Dynamically adjust house edge for maximum profitability (admin endpoint)"""
     global current_house_edge

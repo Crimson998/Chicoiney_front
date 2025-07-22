@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, DECIMAL
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, DECIMAL, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
@@ -12,6 +12,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     credits = Column(DECIMAL(10, 2), default=1000.00)  # 10 digits total, 2 decimal places
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    is_admin = Column(Boolean, default=False)
 
     crash_rounds = relationship('CrashGameRound', back_populates='user')
 
