@@ -25,4 +25,16 @@ class CrashGameRound(Base):
     crashed_at = Column(DECIMAL(10, 2), nullable=False)    # Multiplier at which round crashed
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    user = relationship('User', back_populates='crash_rounds') 
+    user = relationship('User', back_populates='crash_rounds')
+
+class CoinflipRound(Base):
+    __tablename__ = "coinflip_rounds"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    bet_amount = Column(Float)
+    guess = Column(String)  # "heads" or "tails"
+    result = Column(String)  # "heads" or "tails"
+    win = Column(Integer)  # 1 for win, 0 for loss
+    hash = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    user = relationship("User") 

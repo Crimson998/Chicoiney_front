@@ -19,6 +19,7 @@ import math
 
 from models import Base, User, CrashGameRound
 from database import engine, AsyncSessionLocal
+from coinflip import router as coinflip_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -791,3 +792,5 @@ async def adjust_house_edge(new_edge: float, db: AsyncSession = Depends(get_db))
     except Exception as e:
         logger.error(f"Error adjusting house edge: {e}")
         raise HTTPException(status_code=500, detail="Failed to adjust house edge") 
+
+app.include_router(coinflip_router) 
