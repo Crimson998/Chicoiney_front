@@ -124,14 +124,13 @@ const useGame = (token, user, audioRef, refreshUser) => {
   
   // Chart data for interactive visualization
   const [chartData, setChartData] = useState([]);
-  const [chartPoints, setChartPoints] = useState([]);
-  const [chartStartTime, setChartStartTime] = useState(null);
+  // Removed unused chartPoints and chartStartTime
   const [chartAnimation, setChartAnimation] = useState(false);
   const [gameProcessingComplete, setGameProcessingComplete] = useState(true);
   
   const intervalRef = useRef(null);
   const autoPlayTimeoutRef = useRef(null);
-  const chartIntervalRef = useRef(null);
+  // Removed unused chartIntervalRef
 
   // Sound effects
   const playSound = useCallback((type) => {
@@ -179,8 +178,7 @@ const useGame = (token, user, audioRef, refreshUser) => {
       
       // Reset chart for new game
       setChartData([]);
-      setChartPoints([]);
-      setChartStartTime(null);
+      // Removed unused chartPoints and chartStartTime
       setChartAnimation(false);
       
       playSound('start');
@@ -431,7 +429,7 @@ const useGame = (token, user, audioRef, refreshUser) => {
     if (gameActive && currentRound && !gameEnded && crashMultiplier) {
       // Use UTC time to match backend
       const gameStartTime = new Date(currentRound.created_at + 'Z').getTime();
-      setChartStartTime(gameStartTime);
+      // Removed unused chartStartTime
       
       // Only reset chart data if it's empty (new game)
       setChartData(prev => {
@@ -441,12 +439,7 @@ const useGame = (token, user, audioRef, refreshUser) => {
         }
         return prev;
       });
-      setChartPoints(prev => {
-        if (prev.length === 0) {
-          return [];
-        }
-        return prev;
-      });
+      // Removed unused chartPoints
       setChartAnimation(true);
       
       intervalRef.current = setInterval(() => {
@@ -468,7 +461,7 @@ const useGame = (token, user, audioRef, refreshUser) => {
           time: currentTime
         };
         
-        setChartPoints(prev => [...prev, newChartPoint]);
+        setChartData(prev => [...prev, newChartPoint]);
         setChartData(prev => {
           const newData = [...prev, newChartPoint];
           console.log('Chart data updated:', newData.length, 'points, latest:', newChartPoint);
@@ -584,8 +577,7 @@ const useGame = (token, user, audioRef, refreshUser) => {
     stopAutoPlay,
     // Chart data
     chartData,
-    chartPoints,
-    chartStartTime,
+    // Removed unused chartPoints and chartStartTime
     chartAnimation,
     crashMultiplier,
     gameProcessingComplete
@@ -1259,8 +1251,8 @@ const CrashChart = ({
   const animationRef = useRef(null);
   const [hoverPoint, setHoverPoint] = useState(null);
 
-  // Chart dimensions and styling
-  const chartConfig = {
+  // Chart dimensions and styling (memoized)
+  const chartConfig = useMemo(() => ({
     width: 600,
     height: 400,
     padding: 40,
@@ -1271,7 +1263,7 @@ const CrashChart = ({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     textColor: '#ffffff',
     fontSize: 12
-  };
+  }), []);
 
   const drawChart = useCallback(() => {
     const canvas = canvasRef.current;
@@ -1347,10 +1339,6 @@ const CrashChart = ({
     // Cap maximum values to prevent extreme scaling
     maxX = Math.min(maxX, 60); // Max 60 seconds
     maxY = Math.min(maxY, 100); // Max 100x multiplier
-
-    // Find data bounds
-    const maxXData = Math.max(...chartData.map(d => d.x), 10);
-    const maxYData = Math.max(...chartData.map(d => d.y), 2);
 
     // Draw grid
     ctx.strokeStyle = chartConfig.gridColor;
@@ -1498,7 +1486,7 @@ const CrashChart = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    // Removed unused x
     const y = e.clientY - rect.top;
 
     // Find closest point
@@ -1534,7 +1522,7 @@ const CrashChart = ({
       chartData.forEach(point => {
         const pointX = padding + (point.x / maxX) * chartWidth;
         const pointY = height - padding - (point.y / maxY) * chartHeight;
-        const distance = Math.sqrt((x - pointX) ** 2 + (y - pointY) ** 2);
+        const distance = Math.sqrt((e.clientX - rect.left - pointX) ** 2 + (y - pointY) ** 2);
 
         if (distance < minDistance && distance < 20) {
           minDistance = distance;
@@ -1583,7 +1571,7 @@ const CrashChart = ({
   // Draw chart whenever data changes
   useEffect(() => {
     // Only draw if we have data or if game is active
-    if (chartData && chartData.length > 0 || gameActive) {
+    if ((chartData && chartData.length > 0) || gameActive) {
       drawChart();
     }
   }, [drawChart, chartData, gameActive]);
@@ -1716,8 +1704,7 @@ function App() {
     stopAutoPlay,
     // Chart data
     chartData,
-    chartPoints,
-    chartStartTime,
+    // Removed unused chartPoints and chartStartTime
     chartAnimation,
     crashMultiplier,
     gameProcessingComplete
@@ -1851,89 +1838,66 @@ function App() {
         user={user} 
         onLogout={logout} 
         onRefresh={refreshAllData} 
-        isRefreshing={isRefreshing}
-        compactMode={compactMode}
-        onToggleCompactMode={() => setCompactMode(!compactMode)}
+        isRefreshing={isRefreshing} 
+        compactMode={compactMode} 
+        onToggleCompactMode={() => setCompactMode(!compactMode)} 
       />
-      
-      {notification && (
-        <div className={`notification ${notification.type}`}>
-          {notification.message}
-        </div>
-      )}
-      
-      <div className="game-container">
-        <div className="game-main">
-          <div className="game-display">
-            <div className="multiplier-section">
-              <GameDisplay 
-                multiplier={multiplier}
-                gameActive={gameActive}
-                gameEnded={gameEnded}
-                gameResult={gameResult}
-                betAmount={safeBetAmount}
-                autoCashoutEnabled={autoCashoutEnabled}
-                autoCashoutValue={autoCashoutValue}
-                onStartGame={handleStartGame}
-                onCashOut={handleCashOut}
-                user={user}
-                isLoading={gameLoading}
-                autoPlay={autoPlay}
-                autoPlayGames={autoPlayGames}
-                autoPlayCompleted={autoPlayCompleted}
-                autoPlayTotal={autoPlayTotal}
-                onStartAutoPlay={handleStartAutoPlay}
-                onStopAutoPlay={handleStopAutoPlay}
-                onBetChange={setBetAmount}
-              />
-            </div>
-            
-            <div className="chart-section">
-              <CrashChart
-                chartData={chartData}
-                chartAnimation={chartAnimation}
-                gameActive={gameActive}
-                gameEnded={gameEnded}
-                crashMultiplier={crashMultiplier}
-                multiplier={multiplier}
-                betAmount={safeBetAmount}
-                setAutoCashoutValue={setAutoCashoutValue}
-                autoCashoutEnabled={autoCashoutEnabled}
-              />
-            </div>
-          </div>
-          
-          <GameControls
-            betAmount={safeBetAmount}
-            onBetChange={setBetAmount}
-            gameActive={gameActive}
-            user={user}
-            isLoading={gameLoading}
-            autoCashoutValue={autoCashoutValue}
-            setAutoCashoutValue={setAutoCashoutValue}
-            autoCashoutEnabled={autoCashoutEnabled}
-            setAutoCashoutEnabled={setAutoCashoutEnabled}
-            autoPlay={autoPlay}
-            autoPlayGames={autoPlayGames}
-            setAutoPlayGames={setAutoPlayGames}
-            autoPlayDelay={autoPlayDelay}
-            setAutoPlayDelay={setAutoPlayDelay}
-            autoPlayCompleted={autoPlayCompleted}
-            autoPlayTotal={autoPlayTotal}
-          />
-        </div>
-        
-        <div className="game-sidebar">
-          <GameStats stats={stats} />
-          <GameHistory gameHistory={gameHistory} />
-          <RecentCrashes recentCrashes={(gameHistory || []).map(round => ({ multiplier: round.crashed_at }))} />
-        </div>
+      <div className="game-content">
+        <GameDisplay 
+          multiplier={multiplier} 
+          gameActive={gameActive} 
+          gameEnded={gameEnded} 
+          gameResult={gameResult} 
+          betAmount={betAmount} 
+          autoCashoutEnabled={autoCashoutEnabled} 
+          autoCashoutValue={autoCashoutValue}
+          onStartGame={handleStartGame} 
+          onCashOut={handleCashOut} 
+          user={user} 
+          isLoading={gameLoading} 
+          autoPlay={autoPlay} 
+          autoPlayGames={autoPlayGames} 
+          autoPlayCompleted={autoPlayCompleted} 
+          autoPlayTotal={autoPlayTotal} 
+          onStartAutoPlay={handleStartAutoPlay} 
+          onStopAutoPlay={handleStopAutoPlay} 
+          onBetChange={(newAmount) => setBetAmount(newAmount)} 
+        />
+        <GameControls 
+          betAmount={betAmount} 
+          onBetChange={(newAmount) => setBetAmount(newAmount)} 
+          gameActive={gameActive} 
+          user={user} 
+          isLoading={gameLoading} 
+          autoCashoutValue={autoCashoutValue} 
+          setAutoCashoutValue={setAutoCashoutValue} 
+          autoCashoutEnabled={autoCashoutEnabled} 
+          setAutoCashoutEnabled={setAutoCashoutEnabled} 
+          autoPlay={autoPlay} 
+          autoPlayGames={autoPlayGames} 
+          setAutoPlayGames={setAutoPlayGames} 
+          autoPlayDelay={autoPlayDelay} 
+          setAutoPlayDelay={setAutoPlayDelay} 
+          autoPlayCompleted={autoPlayCompleted} 
+          autoPlayTotal={autoPlayTotal} 
+        />
+        <GameStats stats={stats} />
+        <RecentCrashes recentCrashes={gameHistory.filter(round => round.crashed_at)} />
+        <GameHistory gameHistory={gameHistory} />
       </div>
-      
-      {/* Hidden audio element for sound effects */}
-      <audio ref={audioRef} preload="auto" />
+      <CrashChart 
+        chartData={chartData} 
+        chartAnimation={chartAnimation} 
+        gameActive={gameActive} 
+        gameEnded={gameEnded} 
+        crashMultiplier={crashMultiplier} 
+        multiplier={multiplier} 
+        betAmount={betAmount} 
+        setAutoCashoutValue={setAutoCashoutValue} 
+        autoCashoutEnabled={autoCashoutEnabled} 
+      />
     </div>
   );
-}
+};
 
 export default App;
