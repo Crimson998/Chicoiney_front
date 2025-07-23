@@ -1544,12 +1544,10 @@ const CrashChart = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     // Calculate bounds similar to drawChart
     const { width, height, padding } = chartConfig;
-    const chartWidth = width - 2 * padding;
     const chartHeight = height - 2 * padding;
     
     // Use reasonable bounds for setting auto cashout
