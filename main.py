@@ -185,39 +185,18 @@ def validate_crash_multiplier(multiplier: float) -> bool:
     return True
 
 def generate_crash_multiplier(round_id: int, timestamp: int) -> Decimal:
-    """Generate provably fair crash multiplier using Stake's algorithm with optimized house edge"""
-    global current_house_edge
-    
-    try:
-        combined_string = f"{SERVER_SEED}:{round_id}:{timestamp}"
-        hash_result = hashlib.sha256(combined_string.encode()).hexdigest()
-        
-        # Use first 8 characters of hash to generate random value
-        random_hex = hash_result[:8]
-        random_value = int(random_hex, 16) / (16 ** 8)
-        
-        if random_value == 0:
-            random_value = 0.0000001
-        
-        # Use dynamic house edge for maximum profitability
-        house_edge_factor = 1.0 - current_house_edge
-        
-        # Crash formula with optimized house edge: (1 - house_edge) / random_value
-        # This maximizes profits while maintaining provable fairness
-        crash_multiplier_raw = house_edge_factor / random_value
-        crash_multiplier_raw = max(crash_multiplier_raw, 1.00)
-        crash_multiplier_raw = min(crash_multiplier_raw, 100.0)  # More reasonable max
-        
-        # Validate the multiplier
-        if not validate_crash_multiplier(crash_multiplier_raw):
-            logger.warning(f"Generated invalid multiplier: {crash_multiplier_raw}, using fallback")
-            return Decimal("1.50")
-        
-        return Decimal(str(round(crash_multiplier_raw, 2)))
-    except Exception as e:
-        logger.error(f"Error generating crash multiplier: {e}")
-        # Fallback to a safe default
-        return Decimal("1.50")
+    """Provably fair crash multiplier with 5% house edge (1 in 20 crash at 1.00x)"""
+    combined_string = f"{SERVER_SEED}:{round_id}:{timestamp}"
+    hash_result = hashlib.sha256(combined_string.encode()).hexdigest()
+    h = int(hash_result, 16)
+    # 5% house edge: 1 in 20 games crash at 1.00x
+    if h % 20 == 0:
+        return Decimal("1.00")
+    # Otherwise, use the classic exponential formula
+    X = ((h >> 8) % (10 ** 16)) / float(10 ** 16)
+    crash = math.floor((1 / (1 - X)) * 100) / 100
+    # Clamp to a very high max (e.g., 1,000,000x)
+    return Decimal(str(min(crash, 1000000.0)))
 
 def calculate_crash_time(game_start_time: datetime, crash_multiplier: float) -> datetime:
     """Calculate the exact time when the game should crash"""
