@@ -1,9 +1,10 @@
+// Force redeploy: update for backend API URL
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import './App.css';
 
 // Use environment variable for API base URL, fallback to localhost for dev
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = 'https://web-production-fc04.up.railway.app';
 
 // Custom hooks
 const useAuth = () => {
@@ -130,7 +131,6 @@ const useGame = (token, user, audioRef, refreshUser) => {
   
   const intervalRef = useRef(null);
   const autoPlayTimeoutRef = useRef(null);
-  const chartIntervalRef = useRef(null);
 
   // Sound effects
   const playSound = useCallback((type) => {
@@ -1259,7 +1259,7 @@ const CrashChart = ({
   const [hoverPoint, setHoverPoint] = useState(null);
 
   // Chart dimensions and styling
-  const chartConfig = {
+  const chartConfig = useMemo(() => ({
     width: 600,
     height: 400,
     padding: 40,
@@ -1270,92 +1270,47 @@ const CrashChart = ({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     textColor: '#ffffff',
     fontSize: 12
-  };
+  }), []);
 
   const drawChart = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.log('Canvas not found');
-      return;
-    }
-
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.log('Canvas context not found');
-      return;
-    }
-
+    if (!ctx) return;
     const { width, height, padding } = chartConfig;
-
-    // Clear canvas
     ctx.clearRect(0, 0, width, height);
-
-    // Draw background
     ctx.fillStyle = chartConfig.backgroundColor;
     ctx.fillRect(0, 0, width, height);
-
-    // Calculate chart area
     const chartWidth = width - 2 * padding;
     const chartHeight = height - 2 * padding;
-
-    // Handle empty data
     if (!chartData || chartData.length === 0) {
-      if (gameActive) {
-        // Game is active but no data yet, show loading state
         ctx.fillStyle = chartConfig.textColor;
         ctx.font = `${chartConfig.fontSize + 4}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText('Generating chart data...', width / 2, height / 2);
-      } else {
-        // No game active, show empty state
-        ctx.fillStyle = chartConfig.textColor;
-        ctx.font = `${chartConfig.fontSize + 4}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.fillText('Chart will appear when game starts', width / 2, height / 2);
-      }
+      ctx.fillText(gameActive ? 'Generating chart data...' : 'Chart will appear when game starts', width / 2, height / 2);
       return;
     }
-
-    console.log('Drawing chart with', chartData.length, 'points');
-
-    // Calculate dynamic bounds for better scaling
-    const currentTime = chartData.length > 0 ? Math.max(...chartData.map(d => d.x)) : 0;
-    const currentMultiplier = chartData.length > 0 ? Math.max(...chartData.map(d => d.y)) : 1;
-    
-    // Smart bounds calculation
+    // Calculate dynamic bounds
+    const currentTime = Math.max(...chartData.map(d => d.x), 0);
+    const currentMultiplier = Math.max(...chartData.map(d => d.y), 1);
     let maxX, maxY;
-    
     if (gameActive) {
-      // During active game, scale based on current values with some padding
-      maxX = Math.max(currentTime * 1.2, 5); // At least 5 seconds, or 20% more than current
-      maxY = Math.max(currentMultiplier * 1.3, 2); // At least 2x, or 30% more than current
+      maxX = Math.max(currentTime * 1.2, 5);
+      maxY = Math.max(currentMultiplier * 1.3, 2);
     } else if (gameEnded && crashMultiplier) {
-      // Game ended, scale to show the full crash
-      maxX = Math.max(currentTime * 1.1, 3); // At least 3 seconds, or 10% more than current
-      maxY = Math.max(crashMultiplier * 1.2, currentMultiplier * 1.1, 2); // Show crash point with padding
+      maxX = Math.max(currentTime * 1.1, 3);
+      maxY = Math.max(crashMultiplier * 1.2, currentMultiplier * 1.1, 2);
     } else {
-      // Default bounds
       maxX = Math.max(currentTime, 10);
       maxY = Math.max(currentMultiplier, 2);
     }
-    
-    // Ensure minimum ranges for good visibility
     maxX = Math.max(maxX, 3);
     maxY = Math.max(maxY, 1.5);
-    
-    // Cap maximum values to prevent extreme scaling
-    maxX = Math.min(maxX, 60); // Max 60 seconds
-    maxY = Math.min(maxY, 100); // Max 100x multiplier
-
-    // Find data bounds
-    const maxXData = Math.max(...chartData.map(d => d.x), 10);
-    const maxYData = Math.max(...chartData.map(d => d.y), 2);
-
+    maxX = Math.min(maxX, 60);
+    maxY = Math.min(maxY, 100);
     // Draw grid
     ctx.strokeStyle = chartConfig.gridColor;
     ctx.lineWidth = 1;
-    
-    // Vertical grid lines (time)
     for (let i = 0; i <= 10; i++) {
       const x = padding + (i / 10) * chartWidth;
       ctx.beginPath();
@@ -1363,8 +1318,6 @@ const CrashChart = ({
       ctx.lineTo(x, height - padding);
       ctx.stroke();
     }
-
-    // Horizontal grid lines (multiplier)
     for (let i = 0; i <= 10; i++) {
       const y = height - padding - (i / 10) * chartHeight;
       ctx.beginPath();
@@ -1372,28 +1325,20 @@ const CrashChart = ({
       ctx.lineTo(width - padding, y);
       ctx.stroke();
     }
-
-    // Draw axis labels
     ctx.fillStyle = chartConfig.textColor;
     ctx.font = `${chartConfig.fontSize}px Arial`;
     ctx.textAlign = 'center';
-
-    // X-axis labels (time)
     for (let i = 0; i <= 10; i++) {
       const x = padding + (i / 10) * chartWidth;
       const time = (i / 10) * maxX;
       ctx.fillText(`${time.toFixed(1)}s`, x, height - padding + 20);
     }
-
-    // Y-axis labels (multiplier)
     ctx.textAlign = 'right';
     for (let i = 0; i <= 10; i++) {
       const y = height - padding - (i / 10) * chartHeight;
       const mult = (i / 10) * maxY;
       ctx.fillText(`${mult.toFixed(1)}x`, padding - 10, y + 4);
     }
-
-    // Draw crash line only after game has crashed
     if (crashMultiplier && gameEnded) {
       const crashY = height - padding - (crashMultiplier / maxY) * chartHeight;
       ctx.strokeStyle = chartConfig.crashColor;
@@ -1404,60 +1349,41 @@ const CrashChart = ({
       ctx.lineTo(width - padding, crashY);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      // Crash label
       ctx.fillStyle = chartConfig.crashColor;
       ctx.font = `bold ${chartConfig.fontSize}px Arial`;
       ctx.textAlign = 'left';
       ctx.fillText(`CRASH: ${crashMultiplier.toFixed(2)}x`, width - padding + 10, crashY + 4);
     }
-
-    // Draw chart line
     if (chartData.length > 1) {
-      ctx.strokeStyle = gameActive ? chartConfig.lineColor : 
-                       gameEnded ? chartConfig.crashColor : chartConfig.winColor;
+      ctx.strokeStyle = gameActive ? chartConfig.lineColor : gameEnded ? chartConfig.crashColor : chartConfig.winColor;
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-
       ctx.beginPath();
       chartData.forEach((point, index) => {
         const x = padding + (point.x / maxX) * chartWidth;
         const y = height - padding - (point.y / maxY) * chartHeight;
-        
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       });
       ctx.stroke();
-
-      // Draw current point
       if (gameActive && chartData.length > 0) {
         const lastPoint = chartData[chartData.length - 1];
         const x = padding + (lastPoint.x / maxX) * chartWidth;
         const y = height - padding - (lastPoint.y / maxY) * chartHeight;
-
         ctx.fillStyle = chartConfig.lineColor;
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, 2 * Math.PI);
         ctx.fill();
-
-        // Current multiplier label
         ctx.fillStyle = chartConfig.textColor;
         ctx.font = `bold ${chartConfig.fontSize + 2}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(`${lastPoint.y.toFixed(2)}x`, x, y - 15);
       }
     }
-
-    // Draw hover point
     if (hoverPoint) {
       const x = padding + (hoverPoint.x / maxX) * chartWidth;
       const y = height - padding - (hoverPoint.y / maxY) * chartHeight;
-
-      // Hover line
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
@@ -1468,48 +1394,35 @@ const CrashChart = ({
       ctx.lineTo(width - padding, y);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      // Hover point
       ctx.fillStyle = chartConfig.lineColor;
       ctx.beginPath();
       ctx.arc(x, y, 8, 0, 2 * Math.PI);
       ctx.fill();
-
-      // Hover tooltip
       const tooltipText = `${hoverPoint.y.toFixed(2)}x at ${hoverPoint.x.toFixed(1)}s`;
       const tooltipWidth = ctx.measureText(tooltipText).width + 20;
       const tooltipX = Math.min(x + 10, width - tooltipWidth - 10);
       const tooltipY = Math.max(y - 40, padding + 10);
-
       ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
       ctx.fillRect(tooltipX, tooltipY - 20, tooltipWidth, 25);
-
       ctx.fillStyle = chartConfig.textColor;
       ctx.font = `${chartConfig.fontSize}px Arial`;
       ctx.textAlign = 'left';
       ctx.fillText(tooltipText, tooltipX + 10, tooltipY - 5);
     }
-  }, [chartData, chartAnimation, gameActive, gameEnded, crashMultiplier, hoverPoint, chartConfig]);
+  }, [chartData, gameActive, gameEnded, crashMultiplier, hoverPoint, chartConfig]);
 
-  // Handle mouse events for interactivity
   const handleMouseMove = useCallback((e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    // Find closest point
     if (chartData && chartData.length > 0) {
       const { width, height, padding } = chartConfig;
       const chartWidth = width - 2 * padding;
       const chartHeight = height - 2 * padding;
-      
-      // Use same dynamic bounds calculation as in drawChart
       const currentTime = Math.max(...chartData.map(d => d.x));
       const currentMultiplier = Math.max(...chartData.map(d => d.y));
-      
       let maxX, maxY;
       if (gameActive) {
         maxX = Math.max(currentTime * 1.2, 5);
@@ -1521,26 +1434,21 @@ const CrashChart = ({
         maxX = Math.max(currentTime, 10);
         maxY = Math.max(currentMultiplier, 2);
       }
-      
       maxX = Math.max(maxX, 3);
       maxY = Math.max(maxY, 1.5);
       maxX = Math.min(maxX, 60);
       maxY = Math.min(maxY, 100);
-
       let closestPoint = null;
       let minDistance = Infinity;
-
       chartData.forEach(point => {
         const pointX = padding + (point.x / maxX) * chartWidth;
         const pointY = height - padding - (point.y / maxY) * chartHeight;
         const distance = Math.sqrt((x - pointX) ** 2 + (y - pointY) ** 2);
-
         if (distance < minDistance && distance < 20) {
           minDistance = distance;
           closestPoint = point;
         }
       });
-
       setHoverPoint(closestPoint);
     }
   }, [chartData, chartConfig, gameActive, gameEnded, crashMultiplier]);
@@ -1549,45 +1457,27 @@ const CrashChart = ({
     setHoverPoint(null);
   }, []);
 
-  // Handle click to set auto cashout
   const handleChartClick = useCallback((e) => {
     if (!autoCashoutEnabled || gameActive) return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    // Calculate bounds similar to drawChart
-    const { width, height, padding } = chartConfig;
-    const chartWidth = width - 2 * padding;
+    const { height, padding } = chartConfig;
     const chartHeight = height - 2 * padding;
-    
-    // Use reasonable bounds for setting auto cashout
-    const maxY = 10; // Max 10x for auto cashout setting
-    
-    // Convert click position to multiplier
+    const maxY = 10;
     const clickY = height - padding - y;
     const multiplier = (clickY / chartHeight) * maxY;
-    
-    // Clamp to reasonable range
     const clampedMultiplier = Math.max(1.0, Math.min(10.0, multiplier));
-    
-    // Set auto cashout value
     setAutoCashoutValue(parseFloat(clampedMultiplier.toFixed(2)));
   }, [autoCashoutEnabled, gameActive, chartConfig, setAutoCashoutValue]);
 
-  // Draw chart whenever data changes
   useEffect(() => {
-    // Only draw if we have data or if game is active
-    if (chartData && chartData.length > 0 || gameActive) {
+    if ((chartData && chartData.length > 0) || gameActive) {
       drawChart();
     }
   }, [drawChart, chartData, gameActive]);
 
-  // Animation loop for active games
   useEffect(() => {
     if (chartAnimation && gameActive) {
       const animate = () => {
@@ -1596,7 +1486,6 @@ const CrashChart = ({
       };
       animate();
     }
-
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -1647,7 +1536,6 @@ const CrashChart = ({
                   const currentTime = Math.max(...chartData.map(d => d.x));
                   const currentMultiplier = Math.max(...chartData.map(d => d.y));
                   let maxX, maxY;
-                  
                   if (gameActive) {
                     maxX = Math.max(currentTime * 1.2, 5);
                     maxY = Math.max(currentMultiplier * 1.3, 2);
@@ -1658,12 +1546,10 @@ const CrashChart = ({
                     maxX = Math.max(currentTime, 10);
                     maxY = Math.max(currentMultiplier, 2);
                   }
-                  
                   maxX = Math.max(maxX, 3);
                   maxY = Math.max(maxY, 1.5);
                   maxX = Math.min(maxX, 60);
                   maxY = Math.min(maxY, 100);
-                  
                   return `${maxX.toFixed(1)}s × ${maxY.toFixed(1)}x`;
                 })()}
               </span>
@@ -1715,8 +1601,6 @@ function App() {
     stopAutoPlay,
     // Chart data
     chartData,
-    chartPoints,
-    chartStartTime,
     chartAnimation,
     crashMultiplier,
     gameProcessingComplete
@@ -1854,13 +1738,11 @@ function App() {
         compactMode={compactMode}
         onToggleCompactMode={() => setCompactMode(!compactMode)}
       />
-      
       {notification && (
         <div className={`notification ${notification.type}`}>
           {notification.message}
         </div>
       )}
-      
       <div className="game-container">
         <div className="game-main">
           <div className="game-display">
@@ -1886,7 +1768,6 @@ function App() {
                 onBetChange={setBetAmount}
               />
             </div>
-            
             <div className="chart-section">
               <CrashChart
                 chartData={chartData}
@@ -1901,7 +1782,6 @@ function App() {
               />
             </div>
           </div>
-          
           <GameControls
             betAmount={safeBetAmount}
             onBetChange={setBetAmount}
@@ -1921,14 +1801,12 @@ function App() {
             autoPlayTotal={autoPlayTotal}
           />
         </div>
-        
         <div className="game-sidebar">
           <GameStats stats={stats} />
           <GameHistory gameHistory={gameHistory} />
           <RecentCrashes recentCrashes={(gameHistory || []).map(round => ({ multiplier: round.crashed_at }))} />
         </div>
       </div>
-      
       {/* Hidden audio element for sound effects */}
       <audio ref={audioRef} preload="auto" />
     </div>
