@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+// Use environment variable for API base URL, fallback to localhost for dev
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
 export const useAuth = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
