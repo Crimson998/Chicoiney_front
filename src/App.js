@@ -1547,7 +1547,7 @@ const CrashChart = ({
     const y = e.clientY - rect.top;
 
     // Calculate bounds similar to drawChart
-    const { width, height, padding } = chartConfig;
+    const { height, padding } = chartConfig;
     const chartHeight = height - 2 * padding;
     
     // Use reasonable bounds for setting auto cashout
