@@ -11,9 +11,9 @@ const Footer = () => (
       <a href="/support">Support</a>
     </div>
     <div className="footer-socials">
-      <a href="#" aria-label="Twitter">🐦</a>
-      <a href="#" aria-label="Discord">💬</a>
-      <a href="#" aria-label="Instagram">📸</a>
+      <a href="https://twitter.com/" target="_blank" rel="noopener noreferrer" aria-label="Twitter">🐦</a>
+      <a href="https://discord.com/" target="_blank" rel="noopener noreferrer" aria-label="Discord">💬</a>
+      <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">📸</a>
     </div>
     <div className="footer-copy">© {new Date().getFullYear()} StakeYotta. All rights reserved.</div>
   </footer>
