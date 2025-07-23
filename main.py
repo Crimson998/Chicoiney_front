@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -722,6 +722,38 @@ async def list_users(db: AsyncSession = Depends(get_db)):
             "is_admin": getattr(u, 'is_admin', False)
         } for u in users
     ]
+
+@app.patch("/admin/user/{user_id}/credits", dependencies=[Depends(require_admin)])
+async def update_user_credits(user_id: int, credits: float = Body(...), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.credits = Decimal(str(credits))
+    await db.commit()
+    await db.refresh(user)
+    return {"id": user.id, "credits": float(user.credits)}
+
+@app.patch("/admin/user/{user_id}/admin", dependencies=[Depends(require_admin)])
+async def toggle_user_admin(user_id: int, is_admin: bool = Body(...), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_admin = is_admin
+    await db.commit()
+    await db.refresh(user)
+    return {"id": user.id, "is_admin": user.is_admin}
+
+@app.delete("/admin/user/{user_id}", dependencies=[Depends(require_admin)])
+async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.delete(user)
+    await db.commit()
+    return {"detail": "User deleted"}
 
 @app.get("/admin/profit", response_model=dict, dependencies=[Depends(require_admin)])
 async def get_house_profit(db: AsyncSession = Depends(get_db)):
