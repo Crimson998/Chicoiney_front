@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-// Use 1 environment variable for API base URL, fallback to localhost for dev
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+// Use 1 environment variable for API base URL, fallback to production for default
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-fc04.up.railway.app';
 
 export const useAuth = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
