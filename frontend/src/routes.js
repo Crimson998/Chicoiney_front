@@ -8,6 +8,8 @@ import Account from './pages/Account';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Admin from './pages/Admin';
+import Coinflip from './pages/Coinflip';
 import { useAuthContext } from './AuthContext';
 
 const ProtectedRoute = ({ children }) => {
@@ -25,6 +27,8 @@ const AppRoutes = () => (
       <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
       <Route path="/promotions" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
       <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      <Route path="/coinflip" element={<Coinflip />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </Router>
