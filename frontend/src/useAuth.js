@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = 'https://web-production-fc04.up.railway.app';
 
 export const useAuth = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
