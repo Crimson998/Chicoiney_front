@@ -20,6 +20,7 @@ import math
 from models import Base, User, CrashGameRound
 from database import engine, AsyncSessionLocal
 from coinflip import router as coinflip_router
+from dependencies import get_current_user
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

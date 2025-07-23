@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from models import User, CoinflipRound
 from database import get_db
-from main import SERVER_SEED
-from main import get_current_user  # adjust import if needed
+from config import SERVER_SEED
+from dependencies import get_current_user
 import hashlib
 from datetime import datetime
 
