@@ -37,4 +37,16 @@ class CoinflipRound(Base):
     win = Column(Integer)  # 1 for win, 0 for loss
     hash = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    user = relationship("User")
+
+class CoinflipSession(Base):
+    __tablename__ = "coinflip_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    amount = Column(Float, nullable=False)
+    flips = Column(Integer, default=1)
+    last_guess = Column(String, nullable=False)
+    last_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
     user = relationship("User") 
