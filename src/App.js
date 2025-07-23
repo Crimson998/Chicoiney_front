@@ -428,8 +428,7 @@ const useGame = (token, user, audioRef, refreshUser) => {
   useEffect(() => {
     if (gameActive && currentRound && !gameEnded && crashMultiplier) {
       // Use UTC time to match backend
-      const gameStartTime = new Date(currentRound.created_at + 'Z').getTime();
-      // Removed unused chartStartTime
+      // Removed unused gameStartTime
       
       // Only reset chart data if it's empty (new game)
       setChartData(prev => {
@@ -1478,7 +1477,7 @@ const CrashChart = ({
       ctx.textAlign = 'left';
       ctx.fillText(tooltipText, tooltipX + 10, tooltipY - 5);
     }
-  }, [chartData, chartAnimation, gameActive, gameEnded, crashMultiplier, hoverPoint, chartConfig]);
+  }, [chartData, gameActive, gameEnded, crashMultiplier, hoverPoint, chartConfig]);
 
   // Handle mouse events for interactivity
   const handleMouseMove = useCallback((e) => {
@@ -1486,7 +1485,6 @@ const CrashChart = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    // Removed unused x
     const y = e.clientY - rect.top;
 
     // Find closest point
