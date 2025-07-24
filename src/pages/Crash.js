@@ -144,6 +144,7 @@ const Crash = () => {
             <div>Bet: <b>${result.bet_amount ? result.bet_amount.toFixed(2) : 0}</b></div>
             <div>Multiplier: <b>{result.cashed_out_at ? result.cashed_out_at.toFixed(2) : result.crashed_at ? result.crashed_at.toFixed(2) : ''}x</b></div>
             {result.win && <div>Winnings: <b>${result.winnings ? result.winnings.toFixed(2) : ''}</b></div>}
+            {credits !== null && <div>Credits: <b>${credits.toFixed(2)}</b></div>}
           </div>
         )}
       </div>
