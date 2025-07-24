@@ -5,485 +5,486 @@ import '../App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
-// --- Begin Crash game logic (moved from App.js) ---
-// (All custom hooks, components, and logic from App.js, except the router)
+function Crash() {
+  // --- Begin Crash game logic (moved from App.js) ---
+  // (All custom hooks, components, and logic from App.js, except the router)
 
-// Custom hooks
-const useAuth = () => {
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [user, setUser] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // Custom hooks
+  const useAuth = () => {
+    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [user, setUser] = useState(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-  const checkAuth = useCallback(async () => {
-    if (!token) return [];
-    try {
-      const [userResponse, historyResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/user`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_BASE_URL}/crash/rounds`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ]);
-      setUser(userResponse.data);
-      setIsLoggedIn(true);
-      return historyResponse.data;
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      logout();
-      return [];
-    }
-  }, [token]);
-
-  const login = async (username, password) => {
-    setIsLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, formData);
-      const { access_token } = response.data;
-      setToken(access_token);
-      localStorage.setItem('token', access_token);
-      setIsLoggedIn(true);
-      await checkAuth();
-      return true;
-    } catch (error) {
-      throw new Error(error.response?.data?.detail || 'Login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (username, password) => {
-    setIsLoading(true);
-    try {
-      await axios.post(`${API_BASE_URL}/auth/register`, { username, password });
-      return true;
-    } catch (error) {
-      throw new Error(error.response?.data?.detail || 'Registration failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setIsLoggedIn(false);
-    setUser(null);
-  };
-
-  const refreshUser = useCallback(async () => {
-    if (!token) return;
-    try {
-      const response = await axios.get(`${API_BASE_URL}/user`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUser(response.data);
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (token) {
-      checkAuth();
-    }
-  }, [token, checkAuth]);
-
-  return { token, user, isLoggedIn, isLoading, login, register, logout, refreshUser };
-};
-
-const useGame = (token, user, audioRef, refreshUser) => {
-  // eslint-disable-next-line no-unused-vars
-  const [currentRound, setCurrentRound] = useState(null);
-  const [multiplier, setMultiplier] = useState(1.00);
-  const [gameActive, setGameActive] = useState(false);
-  const [gameEnded, setGameEnded] = useState(false);
-  const [gameResult, setGameResult] = useState(null); // 'win', 'crash', or null
-  const [gameHistory, setGameHistory] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [crashMultiplier, setCrashMultiplier] = useState(null);
-  const [autoCashoutValue, setAutoCashoutValue] = useState(2.0);
-  const [autoCashoutEnabled, setAutoCashoutEnabled] = useState(false);
-  const [autoPlay, setAutoPlay] = useState(false);
-  const [autoPlayGames, setAutoPlayGames] = useState(5);
-  const [autoPlayDelay, setAutoPlayDelay] = useState(2);
-  const [autoPlayCompleted, setAutoPlayCompleted] = useState(0);
-  const [autoPlayTotal, setAutoPlayTotal] = useState(0);
-  const [autoPlayBetAmount, setAutoPlayBetAmount] = useState(10);
-  
-  // Chart data for interactive visualization
-  const [chartData, setChartData] = useState([]);
-  // Removed unused chartPoints and chartStartTime
-  const [chartAnimation, setChartAnimation] = useState(false);
-  const [gameProcessingComplete, setGameProcessingComplete] = useState(true);
-  
-  const intervalRef = useRef(null);
-  const autoPlayTimeoutRef = useRef(null);
-  // Removed unused chartIntervalRef
-
-  // Sound effects
-  const playSound = useCallback((type) => {
-    if (audioRef.current) {
-      // Different sounds for different events like Stake
-      switch(type) {
-        case 'win':
-          audioRef.current.src = '/win.mp3';
-          break;
-        case 'crash':
-          audioRef.current.src = '/crash.mp3';
-          break;
-        case 'tick':
-          audioRef.current.src = '/tick.mp3';
-          break;
-        case 'start':
-          audioRef.current.src = '/start.mp3';
-          break;
-        default:
-          audioRef.current.src = '/tick.mp3';
+    const checkAuth = useCallback(async () => {
+      if (!token) return [];
+      try {
+        const [userResponse, historyResponse] = await Promise.all([
+          axios.get(`${API_BASE_URL}/user`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get(`${API_BASE_URL}/crash/rounds`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+        setUser(userResponse.data);
+        setIsLoggedIn(true);
+        return historyResponse.data;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        logout();
+        return [];
       }
-      audioRef.current.volume = 0.3; // Lower volume like Stake
-      audioRef.current.play().catch(() => {}); // Ignore audio errors
-    }
-  }, [audioRef]);
+    }, [token]);
 
-  const startGame = useCallback(async (betAmount) => {
-    if (!token || !user) throw new Error('Not authenticated');
-    
-    setIsLoading(true);
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/crash/start`,
-        { bet_amount: parseFloat(betAmount) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setCurrentRound(response.data);
-      setMultiplier(1.00);
-      setGameActive(true);
-      setGameEnded(false);
-      setGameResult(null);
-      setCrashMultiplier(response.data.crash_multiplier); // Store the crash multiplier from backend
-      setGameProcessingComplete(false); // Game processing not complete until game ends
-      
-      // Reset chart for new game
-      setChartData([]);
-      // Removed unused chartPoints and chartStartTime
-      setChartAnimation(false);
-      
-      playSound('start');
-      
-      return response.data;
-    } catch (error) {
-      console.error('Game start error:', error);
-      throw new Error(error.response?.data?.detail || 'Failed to start game');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, user, playSound]);
+    const login = async (username, password) => {
+      setIsLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        const response = await axios.post(`${API_BASE_URL}/auth/login`, formData);
+        const { access_token } = response.data;
+        setToken(access_token);
+        localStorage.setItem('token', access_token);
+        setIsLoggedIn(true);
+        await checkAuth();
+        return true;
+      } catch (error) {
+        throw new Error(error.response?.data?.detail || 'Login failed');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const cashOut = useCallback(async () => {
-    if (!currentRound || !gameActive || !token || gameEnded) {
-      throw new Error('Cannot cash out - game not active');
-    }
+    const register = async (username, password) => {
+      setIsLoading(true);
+      try {
+        await axios.post(`${API_BASE_URL}/auth/register`, { username, password });
+        return true;
+      } catch (error) {
+        throw new Error(error.response?.data?.detail || 'Registration failed');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const logout = () => {
+      localStorage.removeItem('token');
+      setToken(null);
+      setIsLoggedIn(false);
+      setUser(null);
+    };
+
+    const refreshUser = useCallback(async () => {
+      if (!token) return;
+      try {
+        const response = await axios.get(`${API_BASE_URL}/user`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUser(response.data);
+      } catch (error) {
+        console.error('Failed to refresh user:', error);
+      }
+    }, [token]);
+
+    useEffect(() => {
+      if (token) {
+        checkAuth();
+      }
+    }, [token, checkAuth]);
+
+    return { token, user, isLoggedIn, isLoading, login, register, logout, refreshUser };
+  };
+
+  const useGame = (token, user, audioRef, refreshUser) => {
+    // eslint-disable-next-line no-unused-vars
+    const [currentRound, setCurrentRound] = useState(null);
+    const [multiplier, setMultiplier] = useState(1.00);
+    const [gameActive, setGameActive] = useState(false);
+    const [gameEnded, setGameEnded] = useState(false);
+    const [gameResult, setGameResult] = useState(null); // 'win', 'crash', or null
+    const [gameHistory, setGameHistory] = useState([]);
+    const [stats, setStats] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [crashMultiplier, setCrashMultiplier] = useState(null);
+    const [autoCashoutValue, setAutoCashoutValue] = useState(2.0);
+    const [autoCashoutEnabled, setAutoCashoutEnabled] = useState(false);
+    const [autoPlay, setAutoPlay] = useState(false);
+    const [autoPlayGames, setAutoPlayGames] = useState(5);
+    const [autoPlayDelay, setAutoPlayDelay] = useState(2);
+    const [autoPlayCompleted, setAutoPlayCompleted] = useState(0);
+    const [autoPlayTotal, setAutoPlayTotal] = useState(0);
+    const [autoPlayBetAmount, setAutoPlayBetAmount] = useState(10);
     
-    // Validate multiplier
-    if (multiplier < 1.0) {
-      throw new Error('Invalid multiplier for cash out');
-    }
+    // Chart data for interactive visualization
+    const [chartData, setChartData] = useState([]);
+    // Removed unused chartPoints and chartStartTime
+    const [chartAnimation, setChartAnimation] = useState(false);
+    const [gameProcessingComplete, setGameProcessingComplete] = useState(true);
     
-    setIsLoading(true);
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/crash/cashout`,
-        { round_id: currentRound.id, cash_out_multiplier: multiplier },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    const intervalRef = useRef(null);
+    const autoPlayTimeoutRef = useRef(null);
+    // Removed unused chartIntervalRef
+
+    // Sound effects
+    const playSound = useCallback((type) => {
+      if (audioRef.current) {
+        // Different sounds for different events like Stake
+        switch(type) {
+          case 'win':
+            audioRef.current.src = '/win.mp3';
+            break;
+          case 'crash':
+            audioRef.current.src = '/crash.mp3';
+            break;
+          case 'tick':
+            audioRef.current.src = '/tick.mp3';
+            break;
+          case 'start':
+            audioRef.current.src = '/start.mp3';
+            break;
+          default:
+            audioRef.current.src = '/tick.mp3';
+        }
+        audioRef.current.volume = 0.3; // Lower volume like Stake
+        audioRef.current.play().catch(() => {}); // Ignore audio errors
+      }
+    }, [audioRef]);
+
+    const startGame = useCallback(async (betAmount) => {
+      if (!token || !user) throw new Error('Not authenticated');
       
-      setGameEnded(true);
-      setGameActive(false);
-      setGameResult('win');
-      setCurrentRound(null);
-      setMultiplier(1.00);
-      setCrashMultiplier(null); // No crash multiplier when cashing out
+      setIsLoading(true);
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/crash/start`,
+          { bet_amount: parseFloat(betAmount) },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setCurrentRound(response.data);
+        setMultiplier(1.00);
+        setGameActive(true);
+        setGameEnded(false);
+        setGameResult(null);
+        setCrashMultiplier(response.data.crash_multiplier); // Store the crash multiplier from backend
+        setGameProcessingComplete(false); // Game processing not complete until game ends
+        
+        // Reset chart for new game
+        setChartData([]);
+        // Removed unused chartPoints and chartStartTime
+        setChartAnimation(false);
+        
+        playSound('start');
+        
+        return response.data;
+      } catch (error) {
+        console.error('Game start error:', error);
+        throw new Error(error.response?.data?.detail || 'Failed to start game');
+      } finally {
+        setIsLoading(false);
+      }
+    }, [token, user, playSound]);
+
+    const cashOut = useCallback(async () => {
+      if (!currentRound || !gameActive || !token || gameEnded) {
+        throw new Error('Cannot cash out - game not active');
+      }
       
-      // Stop chart animation
-      setChartAnimation(false);
+      // Validate multiplier
+      if (multiplier < 1.0) {
+        throw new Error('Invalid multiplier for cash out');
+      }
       
-      playSound('win');
-      setGameHistory(prev => [response.data, ...prev]);
-      setGameProcessingComplete(true); // Game processing is now complete
-      return response.data;
-    } catch (error) {
-      if (error.response?.data?.detail === 'Game has already crashed') {
-        // Handle crash manually without calling handleGameCrash
+      setIsLoading(true);
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/crash/cashout`,
+          { round_id: currentRound.id, cash_out_multiplier: multiplier },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setGameEnded(true);
+        setGameActive(false);
+        setGameResult('win');
+        setCurrentRound(null);
+        setMultiplier(1.00);
+        setCrashMultiplier(null); // No crash multiplier when cashing out
+        
+        // Stop chart animation
+        setChartAnimation(false);
+        
+        playSound('win');
+        setGameHistory(prev => [response.data, ...prev]);
+        setGameProcessingComplete(true); // Game processing is now complete
+        return response.data;
+      } catch (error) {
+        if (error.response?.data?.detail === 'Game has already crashed') {
+          // Handle crash manually without calling handleGameCrash
+          setGameEnded(true);
+          setGameResult('crash');
+          setGameActive(false);
+          setCurrentRound(null);
+          setMultiplier(1.00);
+          setCrashMultiplier(multiplier);
+          setChartAnimation(false);
+          playSound('crash');
+          setGameProcessingComplete(true); // Game processing is now complete
+          throw new Error('Game has already crashed!');
+        }
+        throw new Error(error.response?.data?.detail || 'Cash out failed');
+      } finally {
+        setIsLoading(false);
+      }
+    }, [currentRound, gameActive, token, gameEnded, multiplier, playSound]);
+
+    const handleGameCrash = useCallback(async () => {
+      if (!currentRound || !token || gameEnded) return;
+      
+      try {
+        // Use the crash multiplier from backend
+        const finalMultiplier = crashMultiplier || multiplier;
+        
         setGameEnded(true);
         setGameResult('crash');
         setGameActive(false);
         setCurrentRound(null);
         setMultiplier(1.00);
-        setCrashMultiplier(multiplier);
+        
+        // Stop chart animation
         setChartAnimation(false);
+        
         playSound('crash');
+        
+        // Get final game result to verify the crash point
+        const response = await axios.get(
+          `${API_BASE_URL}/crash/round/${currentRound.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // Verify the crash point matches what we calculated
+        if (response.data.crashed_at) {
+          const difference = Math.abs(response.data.crashed_at - finalMultiplier);
+          if (difference > 0.1) {
+            console.warn('Crash point mismatch:', finalMultiplier, 'vs', response.data.crashed_at, 'diff:', difference);
+          } else {
+            console.log('Crash point verified:', finalMultiplier, 'matches backend:', response.data.crashed_at);
+          }
+        }
+        
+        setGameHistory(prev => [response.data, ...prev]);
         setGameProcessingComplete(true); // Game processing is now complete
-        throw new Error('Game has already crashed!');
-      }
-      throw new Error(error.response?.data?.detail || 'Cash out failed');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentRound, gameActive, token, gameEnded, multiplier, playSound]);
-
-  const handleGameCrash = useCallback(async () => {
-    if (!currentRound || !token || gameEnded) return;
-    
-    try {
-      // Use the crash multiplier from backend
-      const finalMultiplier = crashMultiplier || multiplier;
-      
-      setGameEnded(true);
-      setGameResult('crash');
-      setGameActive(false);
-      setCurrentRound(null);
-      setMultiplier(1.00);
-      
-      // Stop chart animation
-      setChartAnimation(false);
-      
-      playSound('crash');
-      
-      // Get final game result to verify the crash point
-      const response = await axios.get(
-        `${API_BASE_URL}/crash/round/${currentRound.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      // Verify the crash point matches what we calculated
-      if (response.data.crashed_at) {
-        const difference = Math.abs(response.data.crashed_at - finalMultiplier);
-        if (difference > 0.1) {
-          console.warn('Crash point mismatch:', finalMultiplier, 'vs', response.data.crashed_at, 'diff:', difference);
-        } else {
-          console.log('Crash point verified:', finalMultiplier, 'matches backend:', response.data.crashed_at);
-        }
-      }
-      
-      setGameHistory(prev => [response.data, ...prev]);
-      setGameProcessingComplete(true); // Game processing is now complete
-    } catch (error) {
-      console.error('Failed to get crash result:', error);
-      setGameProcessingComplete(true); // Even if error, mark as complete
-    }
-  }, [currentRound, token, gameEnded, multiplier, crashMultiplier, playSound]);
-
-  const startAutoPlay = useCallback(async (betAmount, onError) => {
-    if (!token || !user) return;
-    
-    // Validate bet amount
-    if (betAmount > user.credits) {
-      throw new Error('Insufficient credits for auto play');
-    }
-    
-    // Reset auto play state
-    setAutoPlay(true);
-    setAutoPlayCompleted(0);
-    setAutoPlayTotal(autoPlayGames);
-    setAutoPlayBetAmount(betAmount);
-    
-    // Start first game after a small delay to prevent race conditions
-    setTimeout(async () => {
-      try {
-        await startGame(betAmount);
       } catch (error) {
-        console.error('Auto play failed to start:', error);
-        setAutoPlay(false);
-        // Call error callback if provided
-        if (onError) {
-          onError(error);
-        }
+        console.error('Failed to get crash result:', error);
+        setGameProcessingComplete(true); // Even if error, mark as complete
       }
-    }, 100); // Small delay to ensure state is properly set
-  }, [token, user, autoPlayGames, startGame]);
+    }, [currentRound, token, gameEnded, multiplier, crashMultiplier, playSound]);
 
-  const stopAutoPlay = useCallback(() => {
-    setAutoPlay(false);
-    setAutoPlayCompleted(0);
-    setAutoPlayTotal(0);
-    setAutoPlayBetAmount(10);
-    
-    // Clear any pending auto play timeout
-    if (autoPlayTimeoutRef.current) {
-      clearTimeout(autoPlayTimeoutRef.current);
-      autoPlayTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Auto play state machine - handles the flow of auto play games
-  useEffect(() => {
-    // Only run auto play logic when auto play is active and game has ended
-    if (!autoPlay || !gameEnded || gameActive) {
-      return;
-    }
-
-    // Check if we've completed all games
-    if (autoPlayCompleted >= autoPlayTotal) {
-      stopAutoPlay();
-      return;
-    }
-
-    // Schedule next game after delay
-    const scheduleNextGame = () => {
-      autoPlayTimeoutRef.current = setTimeout(async () => {
-        // Double-check auto play is still active
-        if (!autoPlay) {
-          return;
-        }
-
+    const startAutoPlay = useCallback(async (betAmount, onError) => {
+      if (!token || !user) return;
+      
+      // Validate bet amount
+      if (betAmount > user.credits) {
+        throw new Error('Insufficient credits for auto play');
+      }
+      
+      // Reset auto play state
+      setAutoPlay(true);
+      setAutoPlayCompleted(0);
+      setAutoPlayTotal(autoPlayGames);
+      setAutoPlayBetAmount(betAmount);
+      
+      // Start first game after a small delay to prevent race conditions
+      setTimeout(async () => {
         try {
-          // Start next game
-          await startGame(autoPlayBetAmount);
-          setAutoPlayCompleted(prev => prev + 1);
+          await startGame(betAmount);
         } catch (error) {
-          console.error('Auto play game failed:', error);
-          // Continue with next game even if this one failed
-          setAutoPlayCompleted(prev => prev + 1);
+          console.error('Auto play failed to start:', error);
+          setAutoPlay(false);
+          // Call error callback if provided
+          if (onError) {
+            onError(error);
+          }
         }
-      }, autoPlayDelay * 1000);
-    };
+      }, 100); // Small delay to ensure state is properly set
+    }, [token, user, autoPlayGames, startGame]);
 
-    scheduleNextGame();
-
-    // Cleanup function
-    return () => {
+    const stopAutoPlay = useCallback(() => {
+      setAutoPlay(false);
+      setAutoPlayCompleted(0);
+      setAutoPlayTotal(0);
+      setAutoPlayBetAmount(10);
+      
+      // Clear any pending auto play timeout
       if (autoPlayTimeoutRef.current) {
         clearTimeout(autoPlayTimeoutRef.current);
         autoPlayTimeoutRef.current = null;
       }
-    };
-  }, [autoPlay, gameEnded, gameActive, autoPlayCompleted, autoPlayTotal, autoPlayDelay, autoPlayBetAmount, startGame, stopAutoPlay]);
+    }, []);
 
-  const loadGameHistory = useCallback(async () => {
-    if (!token) return;
-    
-    try {
-      setIsRefreshing(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/crash/rounds`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setGameHistory(response.data);
-    } catch (error) {
-      console.error('Failed to load game history:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [token]);
+    // Auto play state machine - handles the flow of auto play games
+    useEffect(() => {
+      // Only run auto play logic when auto play is active and game has ended
+      if (!autoPlay || !gameEnded || gameActive) {
+        return;
+      }
 
-  const loadStats = useCallback(async () => {
-    if (!token) return;
-    
-    try {
-      setIsRefreshing(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/crash/stats`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setStats(response.data);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [token]);
+      // Check if we've completed all games
+      if (autoPlayCompleted >= autoPlayTotal) {
+        stopAutoPlay();
+        return;
+      }
 
-  // Manual refresh function for immediate updates
-  const refreshAllData = useCallback(async () => {
-    if (!token) return;
-    
-    try {
-      setIsRefreshing(true);
-      await Promise.all([
-        refreshUser(),
-        loadStats(),
-        loadGameHistory()
-      ]);
-    } catch (error) {
-      console.error('Failed to refresh all data:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [token, refreshUser, loadStats, loadGameHistory]);
+      // Schedule next game after delay
+      const scheduleNextGame = () => {
+        autoPlayTimeoutRef.current = setTimeout(async () => {
+          // Double-check auto play is still active
+          if (!autoPlay) {
+            return;
+          }
 
-  // Game loop with backend-controlled crash timing and auto cashout
-  useEffect(() => {
-    if (gameActive && currentRound && !gameEnded && crashMultiplier) {
-      // Use UTC time to match backend
-      // Removed unused gameStartTime
-      
-      // Only reset chart data if it's empty (new game)
-      setChartData(prev => {
-        if (prev.length === 0) {
-          console.log('Initializing new chart data');
-          return [];
+          try {
+            // Start next game
+            await startGame(autoPlayBetAmount);
+            setAutoPlayCompleted(prev => prev + 1);
+          } catch (error) {
+            console.error('Auto play game failed:', error);
+            // Continue with next game even if this one failed
+            setAutoPlayCompleted(prev => prev + 1);
+          }
+        }, autoPlayDelay * 1000);
+      };
+
+      scheduleNextGame();
+
+      // Cleanup function
+      return () => {
+        if (autoPlayTimeoutRef.current) {
+          clearTimeout(autoPlayTimeoutRef.current);
+          autoPlayTimeoutRef.current = null;
         }
-        return prev;
-      });
-      // Removed unused chartPoints
-      setChartAnimation(true);
+      };
+    }, [autoPlay, gameEnded, gameActive, autoPlayCompleted, autoPlayTotal, autoPlayDelay, autoPlayBetAmount, startGame, stopAutoPlay]);
+
+    const loadGameHistory = useCallback(async () => {
+      if (!token) return;
       
-      intervalRef.current = setInterval(() => {
-        try {
-          const currentTime = Date.now();
-          // Use UTC time to match backend
-          const gameStartTimeUTC = new Date(currentRound.created_at + 'Z').getTime();
-          const elapsedSeconds = (currentTime - gameStartTimeUTC) / 1000;
-          
-          // Calculate current multiplier using linear growth: 1.0 + (0.1 * seconds)
-          const newMultiplier = Math.max(1.0, 1.0 + (0.1 * elapsedSeconds));
-          
-          setMultiplier(newMultiplier);
+      try {
+        setIsRefreshing(true);
+        const response = await axios.get(
+          `${API_BASE_URL}/crash/rounds`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setGameHistory(response.data);
+      } catch (error) {
+        console.error('Failed to load game history:', error);
+      } finally {
+        setIsRefreshing(false);
+      }
+    }, [token]);
+
+    const loadStats = useCallback(async () => {
+      if (!token) return;
+      
+      try {
+        setIsRefreshing(true);
+        const response = await axios.get(
+          `${API_BASE_URL}/crash/stats`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setStats(response.data);
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      } finally {
+        setIsRefreshing(false);
+      }
+    }, [token]);
+
+    // Manual refresh function for immediate updates
+    const refreshAllData = useCallback(async () => {
+      if (!token) return;
+      
+      try {
+        setIsRefreshing(true);
+        await Promise.all([
+          refreshUser(),
+          loadStats(),
+          loadGameHistory()
+        ]);
+      } catch (error) {
+        console.error('Failed to refresh all data:', error);
+      } finally {
+        setIsRefreshing(false);
+      }
+    }, [token, refreshUser, loadStats, loadGameHistory]);
+
+    // Game loop with backend-controlled crash timing and auto cashout
+    useEffect(() => {
+      if (gameActive && currentRound && !gameEnded && crashMultiplier) {
+        // Use UTC time to match backend
+        // Removed unused gameStartTime
         
-        // Update chart data in real-time
-        const newChartPoint = {
-          x: elapsedSeconds,
-          y: newMultiplier,
-          time: currentTime
-        };
-        
-        setChartData(prev => [...prev, newChartPoint]);
+        // Only reset chart data if it's empty (new game)
         setChartData(prev => {
-          const newData = [...prev, newChartPoint];
-          console.log('Chart data updated:', newData.length, 'points, latest:', newChartPoint);
-          return newData;
+          if (prev.length === 0) {
+            console.log('Initializing new chart data');
+            return [];
+          }
+          return prev;
         });
+        // Removed unused chartPoints
+        setChartAnimation(true);
         
-        // Play tick sound every 0.5x
-        if (Math.floor(newMultiplier * 100) % 50 === 0) {
-          playSound('tick');
-        }
-        
-        // Check auto cashout
-        if (autoCashoutEnabled && autoCashoutValue > 1.0 && newMultiplier >= autoCashoutValue) {
-          clearInterval(intervalRef.current);
-          // Auto cashout
-          cashOut().catch(error => {
-            console.error('Auto cashout failed:', error);
-            // If auto cashout fails, handle as crash
-            handleGameCrash();
+        intervalRef.current = setInterval(() => {
+          try {
+            const currentTime = Date.now();
+            // Use UTC time to match backend
+            const gameStartTimeUTC = new Date(currentRound.created_at + 'Z').getTime();
+            const elapsedSeconds = (currentTime - gameStartTimeUTC) / 1000;
+            
+            // Calculate current multiplier using linear growth: 1.0 + (0.1 * seconds)
+            const newMultiplier = Math.max(1.0, 1.0 + (0.1 * elapsedSeconds));
+            
+            setMultiplier(newMultiplier);
+          
+          // Update chart data in real-time
+          const newChartPoint = {
+            x: elapsedSeconds,
+            y: newMultiplier,
+            time: currentTime
+          };
+          
+          setChartData(prev => [...prev, newChartPoint]);
+          setChartData(prev => {
+            const newData = [...prev, newChartPoint];
+            console.log('Chart data updated:', newData.length, 'points, latest:', newChartPoint);
+            return newData;
           });
-        }
-        
-        // Check if we've reached the crash multiplier
-        if (crashMultiplier && newMultiplier >= crashMultiplier) {
-          clearInterval(intervalRef.current);
-          handleGameCrash();
-        }
-              } catch (error) {
+          
+          // Play tick sound every 0.5x
+          if (Math.floor(newMultiplier * 100) % 50 === 0) {
+            playSound('tick');
+          }
+          
+          // Check auto cashout
+          if (autoCashoutEnabled && autoCashoutValue > 1.0 && newMultiplier >= autoCashoutValue) {
+            clearInterval(intervalRef.current);
+            // Auto cashout
+            cashOut().catch(error => {
+              console.error('Auto cashout failed:', error);
+              // If auto cashout fails, handle as crash
+              handleGameCrash();
+            });
+          }
+          
+          // Check if we've reached the crash multiplier
+          if (crashMultiplier && newMultiplier >= crashMultiplier) {
+            clearInterval(intervalRef.current);
+            handleGameCrash();
+          }
+                } catch (error) {
           console.error('Error in game loop:', error);
           // If there's an error, stop the game
           clearInterval(intervalRef.current);
@@ -1656,5 +1657,10 @@ const CrashChart = ({
 };
 
 // Main App Component
+
+function Crash() {
+  // (Paste the entire body of the previous App function here)
+  // ...
+}
 
 export default Crash;
