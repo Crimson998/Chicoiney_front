@@ -1,5 +1,5 @@
 // Crash game page - moved from original App.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import '../App.css';
 
