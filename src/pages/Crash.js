@@ -1659,3 +1659,5 @@ const CrashChart = ({
 // Main App Component
 
 }
+
+export default Crash;
