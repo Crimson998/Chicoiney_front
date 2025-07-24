@@ -43,7 +43,7 @@ const Admin = () => {
   }, [isLoggedIn, user, token, navigate]);
 
   if (!isLoggedIn || !user?.is_admin) return null;
-
+//1
   return (
     <div className="main-bg">
       <Header />

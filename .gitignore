@@ -1,15 +1,14 @@
-# Virtual Environment
+# Python virtual environments
 venv/
 env/
 ENV/
 
-# Python
+# Python bytecode and build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -25,17 +24,19 @@ wheels/
 .installed.cfg
 *.egg
 
-# Database
+# Node.js dependencies
+node_modules/
+
+# Database files
 *.db
 *.db-shm
 *.db-wal
 
 # Environment variables
 .env
-.env.local
-.env.production
+.env.*
 
-# IDE
+# IDE/editor
 .vscode/
 .idea/
 *.swp
@@ -46,4 +47,7 @@ wheels/
 Thumbs.db
 
 # Logs
-*.log 
+*.log
+
+# Production build output (uncomment if you use build/ for frontend prod)
+# build/ 

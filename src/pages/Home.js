@@ -13,6 +13,13 @@ const games = [
     live: true
   },
   {
+    name: 'Coinflip',
+    description: 'Pick heads or tails, let it ride or cash out!',
+    image: '/assets/game-icons/dice.png',
+    link: '/coinflip',
+    live: true
+  },
+  {
     name: 'Dice',
     description: 'Coming soon!',
     image: '/assets/game-icons/dice.png',
