@@ -1658,9 +1658,5 @@ const CrashChart = ({
 
 // Main App Component
 
-function Crash() {
-  // (Paste the entire body of the previous App function here)
-  // ...
-}
 
 export default Crash;
