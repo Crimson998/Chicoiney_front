@@ -1658,4 +1658,4 @@ const CrashChart = ({
 
 // Main App Component
 
-
+}
