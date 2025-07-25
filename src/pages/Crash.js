@@ -51,19 +51,21 @@ const Crash = () => {
     }
   };
 
-  // Calculate multiplier based on backend created_at and real time
+  // Calculate multiplier based on backend created_at and real time, using backend's formula
   const animateMultiplier = (crashAt, createdAtStr) => {
     if (!createdAtStr) return;
-    // Ensure createdAtStr is parsed as UTC
     let createdAtTime = new Date(createdAtStr).getTime();
     if (isNaN(createdAtTime) && createdAtStr.endsWith('Z') === false) {
       createdAtTime = new Date(createdAtStr + 'Z').getTime();
     }
+    // Calculate the exact time (in ms) when the game should crash
+    const secondsToCrash = Math.max(0, (crashAt - 1.0) / 0.1);
+    const crashTime = createdAtTime + secondsToCrash * 1000;
     intervalRef.current = setInterval(() => {
       const now = Date.now();
-      const elapsed = Math.max(0, (now - createdAtTime) / 1000); // Clamp to >= 0
-      const current = 1.0 + 0.1 * elapsed;
-      if (current >= crashAt) {
+      const elapsed = Math.max(0, (now - createdAtTime) / 1000);
+      let current = 1.0 + 0.1 * elapsed;
+      if (now >= crashTime || current >= crashAt) {
         clearInterval(intervalRef.current);
         setMultiplier(crashAt);
         setGameActive(false);
