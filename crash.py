@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import hashlib
 import math
 import time
+import secrets
 
 from models import User, CrashGameRound
 from database import get_db
@@ -20,9 +21,15 @@ MAX_BET = 10000.0
 HOUSE_EDGE = 0.05  # 5% house edge
 
 
-def generate_crash_multiplier(round_id: int, timestamp: int) -> float:
-    combined_string = f"{SERVER_SEED}:{round_id}:{timestamp}"
-    hash_result = hashlib.sha256(combined_string.encode()).hexdigest()
+def generate_server_seed():
+    return secrets.token_hex(16)
+
+def hash_server_seed(server_seed):
+    return hashlib.sha256(server_seed.encode()).hexdigest()
+
+def generate_crash_multiplier_from_seed(server_seed):
+    # Use the server seed to generate a provably fair crash multiplier
+    hash_result = hashlib.sha256(server_seed.encode()).hexdigest()
     h = int(hash_result, 16)
     if h % 20 == 0:
         return 1.00
@@ -42,17 +49,21 @@ async def start_crash_round(
         raise HTTPException(status_code=400, detail="Insufficient credits")
     round_id = (await db.execute(select(CrashGameRound.id).order_by(CrashGameRound.id.desc()).limit(1))).scalar_one_or_none() or 0
     round_id += 1
-    timestamp = int(time.time())
-    crash_multiplier = generate_crash_multiplier(round_id, timestamp)
+    # Provably fair: generate a random server seed and hash
+    server_seed = generate_server_seed()
+    server_seed_hash = hash_server_seed(server_seed)
+    crash_multiplier = generate_crash_multiplier_from_seed(server_seed)
     current_user.credits -= Decimal(str(bet_amount))
-    # Add a 100ms buffer to created_at
     buffered_created_at = datetime.utcnow() - timedelta(milliseconds=100)
     round_obj = CrashGameRound(
         user_id=current_user.id,
         bet_amount=Decimal(str(bet_amount)),
         crashed_at=crash_multiplier,
         cashed_out_at=None,
-        created_at=buffered_created_at
+        created_at=buffered_created_at,
+        # Store the server seed and hash for later reveal
+        server_seed=server_seed,
+        server_seed_hash=server_seed_hash
     )
     db.add(round_obj)
     await db.commit()
@@ -64,7 +75,8 @@ async def start_crash_round(
         "cashed_out_at": None,
         "crashed_at": None,
         "created_at": round_obj.created_at.isoformat() + "Z",
-        "crash_multiplier": float(crash_multiplier)
+        "crash_multiplier": float(crash_multiplier),
+        "server_seed_hash": server_seed_hash
     }
 
 @router.post("/cashout")
@@ -115,7 +127,9 @@ async def get_crash_round(
         "bet_amount": float(round_obj.bet_amount),
         "cashed_out_at": float(round_obj.cashed_out_at) if round_obj.cashed_out_at else None,
         "crashed_at": float(round_obj.crashed_at),
-        "created_at": round_obj.created_at.isoformat() + "Z"
+        "created_at": round_obj.created_at.isoformat() + "Z",
+        "server_seed": getattr(round_obj, "server_seed", None),
+        "server_seed_hash": getattr(round_obj, "server_seed_hash", None)
     }
 
 @router.get("/rounds")

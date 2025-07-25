@@ -20,10 +20,13 @@ class CrashGameRound(Base):
     __tablename__ = 'crash_game_rounds'
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    bet_amount = Column(DECIMAL(10, 2), nullable=False)  # 10 digits total, 2 decimal places
-    cashed_out_at = Column(DECIMAL(10, 2), nullable=True)  # Multiplier at which user cashed out
-    crashed_at = Column(DECIMAL(10, 2), nullable=False)    # Multiplier at which round crashed
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    bet_amount = Column(Float, nullable=False)  # 10 digits total, 2 decimal places
+    cashed_out_at = Column(Float, nullable=True)  # Multiplier at which user cashed out
+    crashed_at = Column(Float, nullable=False)    # Multiplier at which round crashed
+    created_at = Column(DateTime, nullable=False)
+    # Provably fair fields
+    server_seed = Column(String, nullable=True)
+    server_seed_hash = Column(String, nullable=True)
 
     user = relationship('User', back_populates='crash_rounds')
 
