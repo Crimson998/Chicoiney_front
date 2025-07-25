@@ -13,7 +13,7 @@ from dependencies import get_current_user
 
 router = APIRouter(prefix="/crash", tags=["Crash"])
 
-# --- Provably fair crash multiplier (5% house edge, Stake/Yotta style) ---
+# ---1 Provably fair crash multiplier (5% house edge, Stake/Yotta style) ---
 SERVER_SEED = "casino_provably_fair_seed_2024"
 MIN_BET = 0.01
 MAX_BET = 10000.0
