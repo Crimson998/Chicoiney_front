@@ -17,6 +17,7 @@ const Crash = () => {
   const [cashedOut, setCashedOut] = useState(false);
   const [credits, setCredits] = useState(null);
   const [roundId, setRoundId] = useState(null);
+  const [createdAt, setCreatedAt] = useState(null);
   const [token] = useState(localStorage.getItem('token'));
   const intervalRef = useRef(null);
 
@@ -30,6 +31,7 @@ const Crash = () => {
     setCrashMultiplier(null);
     setMultiplier(1.0);
     setGameActive(false);
+    setCreatedAt(null);
     try {
       const res = await axios.post(
         `${API_BASE_URL}/crash/start`,
@@ -38,9 +40,10 @@ const Crash = () => {
       );
       setRoundId(res.data.id);
       setCrashMultiplier(res.data.crash_multiplier);
+      setCreatedAt(res.data.created_at);
       setGameActive(true);
       setMultiplier(1.0);
-      animateMultiplier(res.data.crash_multiplier);
+      animateMultiplier(res.data.crash_multiplier, res.data.created_at);
     } catch (err) {
       setMessage(err.response?.data?.detail || 'Error starting game');
     } finally {
@@ -48,12 +51,14 @@ const Crash = () => {
     }
   };
 
-  const animateMultiplier = (crashAt) => {
-    let current = 1.0;
-    const start = Date.now();
+  // Calculate multiplier based on backend created_at and real time
+  const animateMultiplier = (crashAt, createdAtStr) => {
+    if (!createdAtStr) return;
+    const createdAtTime = new Date(createdAtStr).getTime();
     intervalRef.current = setInterval(() => {
-      const elapsed = (Date.now() - start) / 1000;
-      current = 1.0 + 0.1 * elapsed;
+      const now = Date.now();
+      const elapsed = (now - createdAtTime) / 1000;
+      const current = 1.0 + 0.1 * elapsed;
       if (current >= crashAt) {
         clearInterval(intervalRef.current);
         setMultiplier(crashAt);
@@ -70,9 +75,25 @@ const Crash = () => {
     setIsLoading(true);
     setMessage('');
     try {
+      // Calculate the real-time multiplier at the moment of cashout
+      let cashoutMultiplier = multiplier;
+      if (createdAt) {
+        const createdAtTime = new Date(createdAt).getTime();
+        const now = Date.now();
+        const elapsed = (now - createdAtTime) / 1000;
+        cashoutMultiplier = 1.0 + 0.1 * elapsed;
+      }
+      if (crashMultiplier && cashoutMultiplier >= crashMultiplier) {
+        setMessage('Game has already crashed!');
+        setGameActive(false);
+        clearInterval(intervalRef.current);
+        setTimeout(() => handleCrash(), 500);
+        setIsLoading(false);
+        return;
+      }
       const res = await axios.post(
         `${API_BASE_URL}/crash/cashout`,
-        { round_id: roundId, cash_out_multiplier: multiplier },
+        { round_id: roundId, cash_out_multiplier: cashoutMultiplier },
         { headers }
       );
       clearInterval(intervalRef.current);
@@ -80,7 +101,7 @@ const Crash = () => {
       setCashedOut(true);
       setGameActive(false);
       setCredits(res.data.winnings ? res.data.winnings : null);
-      setMessage(`Cashed out at ${multiplier.toFixed(2)}x!`);
+      setMessage(`Cashed out at ${cashoutMultiplier.toFixed(2)}x!`);
     } catch (err) {
       setMessage(err.response?.data?.detail || 'Error cashing out');
     } finally {
