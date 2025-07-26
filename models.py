@@ -15,18 +15,32 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
 
     crash_rounds = relationship('CrashGameRound', back_populates='user')
+    server_seeds = relationship('ServerSeed', back_populates='user')
+
+class ServerSeed(Base):
+    __tablename__ = 'server_seeds'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    server_seed = Column(String, nullable=False)  # The actual server seed
+    seed_hash = Column(String, nullable=False)    # Hash of server seed for pre-commitment
+    used = Column(Boolean, default=False)         # Whether this seed has been used
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship('User', back_populates='server_seeds')
 
 class CrashGameRound(Base):
     __tablename__ = 'crash_game_rounds'
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    bet_amount = Column(Float, nullable=False)  # 10 digits total, 2 decimal places
-    cashed_out_at = Column(Float, nullable=True)  # Multiplier at which user cashed out
-    crashed_at = Column(Float, nullable=False)    # Multiplier at which round crashed
-    created_at = Column(DateTime, nullable=False)
+    bet_amount = Column(DECIMAL(10, 2), nullable=False)  # 10 digits total, 2 decimal places
+    cashed_out_at = Column(DECIMAL(10, 2), nullable=True)  # Multiplier at which user cashed out
+    crashed_at = Column(DECIMAL(10, 2), nullable=False)    # Multiplier at which round crashed
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
     # Provably fair fields
-    server_seed = Column(String, nullable=True)
-    server_seed_hash = Column(String, nullable=True)
+    server_seed = Column(String, nullable=False)  # Server seed used for this round
+    client_seed = Column(String, nullable=False)  # Client seed provided by user
+    nonce = Column(Integer, nullable=False)       # Round number for uniqueness
 
     user = relationship('User', back_populates='crash_rounds')
 
@@ -40,6 +54,12 @@ class CoinflipRound(Base):
     win = Column(Integer)  # 1 for win, 0 for loss
     hash = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # Provably fair fields
+    server_seed = Column(String, nullable=False)  # Server seed used for this round
+    client_seed = Column(String, nullable=False)  # Client seed provided by user
+    nonce = Column(Integer, nullable=False)       # Round number for uniqueness
+    
     user = relationship("User")
 
 class CoinflipSession(Base):
